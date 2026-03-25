@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Registry Copy Tool | MTCIC</title>
+<style>
+:root {
+  --green-dark: #146151;
+  --green-banner: #1E5F53;
+  --green-light: #e8f5e9;
+  --blue: #0052cc;
+  --blue-light: #eaf4ff;
+  --red: #A3262A;
+  --red-light: #fce8e8;
+  --amber: #b58900;
+  --amber-bg: #fff8e1;
+  --amber-border: #f0c000;
+  --text: #333;
+  --text-mid: #555;
+  --text-light: #888;
+  --border: #d0d0d0;
+  --border-light: #e8e8e8;
+  --bg: #f5f6f7;
+  --card-bg: #fff;
+  --radius: 6px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-lg: 0 2px 8px rgba(0,0,0,0.1);
+  --empty-bg: #fafafa;
+  --empty-text: #bbb;
+  --copied-green: #2e7d32;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px; line-height: 1.5; color: var(--text); background: var(--bg);
+}
+
+/* HEADER */
+.header {
+  background: var(--green-banner); color: #fff; padding: 12px 20px;
+  display: flex; align-items: center; gap: 12px;
+}
+.header h1 { font-size: 16px; font-weight: 600; letter-spacing: 0.3px; }
+.header .badge {
+  background: rgba(255,255,255,0.2); font-size: 11px; padding: 2px 8px;
+  border-radius: 10px; font-weight: 500;
+}
+
+/* MAIN LAYOUT */
+.main { max-width: 720px; margin: 0 auto; padding: 16px; }
+@media (min-width: 1100px) {
+  .main { max-width: 460px; margin: 0 16px; }
+}
+
+/* INPUT SECTION */
+.input-section {
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px; margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+.input-section label { font-weight: 600; display: block; margin-bottom: 6px; font-size: 13px; }
+.input-section textarea {
+  width: 100%; min-height: 80px; border: 1px solid var(--border);
+  border-radius: 4px; padding: 10px; font-family: 'SF Mono', 'Consolas', monospace;
+  font-size: 12px; resize: vertical; line-height: 1.4;
+}
+.input-section textarea:focus { outline: 2px solid var(--blue); outline-offset: -1px; border-color: var(--blue); }
+.btn-load {
+  margin-top: 10px; background: var(--green-dark); color: #fff; border: none;
+  padding: 10px 24px; border-radius: 4px; font-size: 14px; font-weight: 600;
+  cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-load:hover { background: #0f5043; }
+.btn-load:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-clear {
+  margin-top: 10px; margin-left: 8px; background: transparent; color: var(--text-mid);
+  border: 1px solid var(--border); padding: 10px 16px; border-radius: 4px;
+  font-size: 13px; cursor: pointer;
+}
+.btn-clear:hover { background: #f0f0f0; }
+
+/* ERROR */
+.error-banner {
+  background: var(--red-light); border: 2px solid var(--red); border-radius: var(--radius);
+  padding: 12px 16px; margin-bottom: 16px; display: none;
+}
+.error-banner strong { color: var(--red); }
+
+/* FILING HEADER */
+.filing-header {
+  background: var(--card-bg); border: 1px solid var(--border); border-left: 4px solid var(--green-dark);
+  border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px;
+  box-shadow: var(--shadow); display: none;
+}
+.filing-header .form-badge {
+  display: inline-block; background: var(--green-dark); color: #fff;
+  padding: 2px 10px; border-radius: 3px; font-size: 12px; font-weight: 700;
+  margin-right: 8px; letter-spacing: 0.5px;
+}
+.filing-header .entity-name {
+  font-size: 16px; font-weight: 700; color: var(--text); display: block; margin-top: 6px;
+}
+.filing-header .form-desc { font-size: 12px; color: var(--text-mid); margin-top: 2px; }
+
+/* SUPPORTING DOCS BANNER */
+.docs-banner {
+  background: var(--amber-bg); border: 2px solid var(--amber-border);
+  border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px; display: none;
+}
+.docs-banner .docs-title {
+  font-weight: 700; color: var(--amber); margin-bottom: 6px;
+  display: flex; align-items: center; gap: 6px;
+}
+.docs-banner .docs-title::before { content: '⚠'; font-size: 16px; }
+.docs-banner ul { margin: 0; padding-left: 20px; }
+.docs-banner li { font-size: 13px; color: var(--text); margin-bottom: 3px; }
+.docs-banner .docs-confirm {
+  margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--amber-border);
+  display: flex; align-items: center; gap: 8px;
+}
+.docs-banner .docs-confirm input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+.docs-banner .docs-confirm label { font-size: 13px; font-weight: 600; cursor: pointer; }
+
+/* PROGRESS BAR */
+.progress-bar {
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 10px 16px; margin-bottom: 16px;
+  display: none; font-size: 12px; color: var(--text-mid);
+}
+.progress-bar .bar-track {
+  height: 4px; background: var(--border-light); border-radius: 2px; margin-top: 6px;
+}
+.progress-bar .bar-fill {
+  height: 100%; background: var(--green-dark); border-radius: 2px;
+  transition: width 0.3s ease; width: 0%;
+}
+
+/* TAB SECTIONS */
+.tab-section {
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: var(--radius); margin-bottom: 12px; box-shadow: var(--shadow);
+  overflow: hidden; display: none;
+}
+.tab-header {
+  padding: 12px 16px; background: var(--green-light); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; cursor: pointer;
+  user-select: none;
+}
+.tab-header h3 {
+  font-size: 14px; font-weight: 700; color: var(--green-dark);
+  display: flex; align-items: center; gap: 8px;
+}
+.tab-header .field-count {
+  font-size: 11px; font-weight: 500; color: var(--text-mid);
+  background: #fff; padding: 1px 8px; border-radius: 10px;
+}
+.tab-header .collapse-icon { font-size: 12px; color: var(--text-mid); transition: transform 0.2s; }
+.tab-section.collapsed .tab-header .collapse-icon { transform: rotate(-90deg); }
+.tab-section.collapsed .tab-body { display: none; }
+.tab-body { padding: 0; }
+
+/* CHANGE FILING: NO CHANGES */
+.tab-section.no-changes .tab-header { background: #f8f8f8; }
+.tab-section.no-changes .tab-header h3 { color: var(--text-light); }
+.tab-section.no-changes .no-change-label {
+  font-size: 11px; background: var(--border-light); color: var(--text-light);
+  padding: 2px 8px; border-radius: 10px; font-weight: 500;
+}
+
+/* FIELD ROW */
+.field-row {
+  display: flex; align-items: flex-start; padding: 8px 16px;
+  border-bottom: 1px solid var(--border-light);
+}
+.field-row:last-child { border-bottom: none; }
+.field-row .field-label {
+  flex: 0 0 170px; font-size: 12px; color: var(--text-mid);
+  font-weight: 500; padding-top: 2px; padding-right: 12px;
+}
+.field-row .field-value {
+  flex: 1; font-size: 13px; color: var(--text); font-weight: 500;
+  word-break: break-word; padding-right: 8px;
+}
+.field-row .field-value.empty { color: var(--empty-text); font-style: italic; font-weight: 400; }
+.field-row .btn-copy {
+  flex: 0 0 auto; background: var(--blue-light); color: var(--blue);
+  border: 1px solid #c4daef; border-radius: 3px; padding: 2px 10px;
+  font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap;
+  transition: all 0.15s;
+}
+.field-row .btn-copy:hover { background: #d4e8ff; }
+.field-row .btn-copy.copied {
+  background: var(--green-light); color: var(--copied-green);
+  border-color: #a5d6a7;
+}
+.field-row .btn-copy.no-copy { visibility: hidden; }
+
+/* ENTITY CARD (owners, directors, shareholders, beneficial owners) */
+.entity-card {
+  margin: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius);
+  overflow: hidden;
+}
+.entity-card-header {
+  padding: 8px 14px; background: #f0f4f8; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.entity-card-header h4 { font-size: 13px; font-weight: 700; color: var(--text); }
+.entity-card-header .action-badge {
+  font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 3px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.action-badge.adding { background: #c8e6c9; color: #2e7d32; }
+.action-badge.removing { background: #ffcdd2; color: #c62828; }
+.action-badge.updating { background: #bbdefb; color: #1565c0; }
+.action-badge.appointed { background: #c8e6c9; color: #2e7d32; }
+.action-badge.ceased { background: #ffcdd2; color: #c62828; }
+.action-badge.changed { background: #bbdefb; color: #1565c0; }
+.entity-card .field-row .field-label { flex: 0 0 160px; }
+
+/* LATE FILING WARNING */
+.late-warning {
+  background: var(--amber-bg); border: 1px solid var(--amber-border);
+  padding: 8px 16px; margin: 10px 12px; border-radius: 4px;
+  font-size: 12px; color: var(--amber); font-weight: 600;
+}
+
+/* RESPONSIVE: SIDEBAR MODE */
+@media (max-width: 500px) {
+  .field-row .field-label { flex: 0 0 120px; font-size: 11px; }
+  .field-row .field-value { font-size: 12px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Registry Copy Tool</h1>
+  <span class="badge">MTCIC Staff</span>
+</div>
+
+<div class="main">
+  <div class="input-section">
+    <label for="jsonInput">Paste JSON data from filed PDF</label>
+    <textarea id="jsonInput" placeholder="Paste the minified JSON line from the data page of the filed PDF here…"></textarea>
+    <button class="btn-load" id="btnLoad" onclick="loadData()">Load filing</button>
+    <button class="btn-clear" id="btnClear" onclick="clearAll()" style="display:none">Clear</button>
+  </div>
+
+  <div class="error-banner" id="errorBanner"><strong>Error:</strong> <span id="errorText"></span></div>
+
+  <div class="filing-header" id="filingHeader"></div>
+  <div class="docs-banner" id="docsBanner"></div>
+  <div class="progress-bar" id="progressBar">
+    <span id="progressText">0 of 0 fields copied</span>
+    <div class="bar-track"><div class="bar-fill" id="progressFill"></div></div>
+  </div>
+  <div id="fieldsContainer"></div>
+</div>
+
+<script>
+// ============================================================
+// CONSTANTS & MAPPINGS
+// ============================================================
+
+const TYPE_LABELS = {
+  person: 'Natural person', natural: 'Natural person',
+  ki_company: 'Registered Kiribati company', kiribati_co: 'Registered Kiribati company',
+  other_entity: 'Other registered entity'
+};
+
+const ACTIVITY_MAP = {
+  'Accommodation': 'Accommodation',
+  'Agriculture': 'Agriculture',
+  'Building and construction': 'Building and construction',
+  'Communication': 'Communication',
+  'Education': 'Education',
+  'Finance and insurance': 'Finance and insurance',
+  'Finance and Insurance': 'Finance and insurance',
+  'Fishing': 'Fishing',
+  'Food and beverage services': 'Food and beverage services',
+  'Manufacturing': 'Manufacturing',
+  'Services to businesses': 'Services to businesses',
+  'Services to households': 'Services to households',
+  'Tourism (excluding accommodation)': 'Tourism (excluding accommodation)',
+  'Transport and storage': 'Transport and storage',
+  'Wholesale and retail trade': 'Wholesale and retail trade',
+  'Other': 'Other'
+};
+
+const CONSTITUTION_LABELS = {
+  'default': 'Default constitution',
+  'limited': 'Limited constitution',
+  'own': 'Own constitution',
+  'modified': 'Modified default constitution'
+};
+
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+// ============================================================
+// PARSE INPUT
+// ============================================================
+
+function parseInput(raw) {
+  let cleaned = raw.trim();
+  // Strip DATA markers if present
+  if (cleaned.includes('===DATA_START===')) cleaned = cleaned.split('===DATA_START===').pop();
+  if (cleaned.includes('===DATA_END===')) cleaned = cleaned.split('===DATA_END===')[0];
+  cleaned = cleaned.trim();
+  // Strip smart quotes
+  cleaned = cleaned.replace(/[\u201C\u201D]/g, '"').replace(/[\u2018\u2019]/g, "'");
+  // PDF copy often wraps long lines — strip newlines/carriage returns that break JSON strings.
+  // Remove all literal \r and \n characters. The minified JSON should be a single line,
+  // so any newlines are artefacts of the PDF viewer's text wrapping.
+  cleaned = cleaned.replace(/[\r\n]+/g, '');
+  return JSON.parse(cleaned);
+}
+
+// ============================================================
+// FORMAT HELPERS
+// ============================================================
+
+function uc(val) { return val ? String(val).toUpperCase() : ''; }
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  // Already DD/MM/YYYY
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) return dateStr;
+  // Pad components
+  const parts = dateStr.split('/');
+  if (parts.length === 3) {
+    return parts[0].padStart(2,'0') + '/' + parts[1].padStart(2,'0') + '/' + parts[2];
+  }
+  return dateStr;
+}
+function formatDob(mm, yy) {
+  if (!mm && !yy) return '';
+  return (mm || '??') + '/' + (yy || '????');
+}
+function formatAddr(obj, keys) {
+  if (!obj) return '';
+  const parts = (keys || ['addr1','addr2','city','island','country','postcode'])
+    .map(k => obj[k]).filter(Boolean);
+  return parts.join(', ');
+}
+
+// Expand an address object into individual field rows with per-field copy buttons
+function addressRows(obj, opts) {
+  opts = opts || {};
+  const prefix = opts.prefix ? opts.prefix + ' — ' : '';
+  const noCopy = opts.noCopy || false;
+  if (!obj) return '';
+
+  const k = opts.keys || { addr1: 'addr1', addr2: 'addr2', city: 'city', island: 'island', country: 'country', postcode: 'postcode' };
+  let html = '';
+  html += fieldRow(prefix + 'Village / street', uc(obj[k.addr1]), { noCopy });
+  if (obj[k.addr2]) html += fieldRow(prefix + 'Second line', uc(obj[k.addr2]), { noCopy });
+  if (k.city && obj[k.city]) html += fieldRow(prefix + 'City / town', obj[k.city], { noCopy });
+  if (obj[k.island]) html += fieldRow(prefix + 'Island', obj[k.island], { noCopy });
+  if (k.country && obj[k.country]) html += fieldRow(prefix + 'Country', obj[k.country], { noCopy });
+  if (k.postcode && obj[k.postcode]) html += fieldRow(prefix + 'Postcode', obj[k.postcode], { noCopy });
+  return html;
+}
+
+// Kiribati address (CO forms — addr1, addr2, island only)
+function kiribatiAddrRows(obj, prefix) {
+  if (!obj) return '';
+  const p = prefix ? prefix + ' — ' : '';
+  let html = '';
+  html += fieldRow(p + 'Village / street', uc(obj.addr1));
+  if (obj.addr2) html += fieldRow(p + 'Second line', uc(obj.addr2));
+  if (obj.island) html += fieldRow(p + 'Island', obj.island);
+  return html;
+}
+function entityName(o) {
+  if (!o) return '';
+  const t = o.type;
+  if (t === 'person' || t === 'natural') {
+    if (o.idFirst || o.idLast) return uc([o.idFirst, o.idLast].filter(Boolean).join(' '));
+    return uc([o.first, o.middle, o.last].filter(Boolean).join(' '));
+  }
+  if (t === 'ki_company' || t === 'kiribati_co') return uc(o.entityName || o.rmEntityName || '');
+  if (t === 'other_entity') return uc(o.idEntityName || o.oeName || o.rmEntityName || '');
+  return uc(o.displayName || '');
+}
+
+// ============================================================
+// COPY MECHANICS
+// ============================================================
+
+let totalCopyable = 0, copiedCount = 0;
+
+function copyValue(btn, value) {
+  navigator.clipboard.writeText(value).then(() => {
+    btn.textContent = '✓ Copied';
+    btn.classList.add('copied');
+    if (!btn.dataset.counted) {
+      btn.dataset.counted = '1';
+      copiedCount++;
+      updateProgress();
+    }
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+  }).catch(() => {
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = value; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+    btn.textContent = '✓ Copied';
+    btn.classList.add('copied');
+    if (!btn.dataset.counted) { btn.dataset.counted = '1'; copiedCount++; updateProgress(); }
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+  });
+}
+
+function updateProgress() {
+  const pct = totalCopyable > 0 ? Math.round((copiedCount / totalCopyable) * 100) : 0;
+  document.getElementById('progressText').textContent = `${copiedCount} of ${totalCopyable} fields copied`;
+  document.getElementById('progressFill').style.width = pct + '%';
+}
+
+// ============================================================
+// FIELD ROW BUILDER
+// ============================================================
+
+function fieldRow(label, value, opts) {
+  opts = opts || {};
+  const copyVal = opts.copyAs !== undefined ? opts.copyAs : value;
+  const isEmpty = !value && value !== 0;
+  const showCopy = !isEmpty && !opts.noCopy;
+  if (showCopy) totalCopyable++;
+
+  return `<div class="field-row">
+    <span class="field-label">${label}</span>
+    <span class="field-value${isEmpty ? ' empty' : ''}">${isEmpty ? '—' : escHtml(String(value))}</span>
+    ${showCopy
+      ? `<button class="btn-copy" onclick="copyValue(this, ${escAttr(String(copyVal))})">Copy</button>`
+      : '<button class="btn-copy no-copy">Copy</button>'}
+  </div>`;
+}
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escAttr(s) {
+  return "'" + s.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n') + "'";
+}
+
+// ============================================================
+// TAB SECTION BUILDER
+// ============================================================
+
+function tabSection(title, contentHtml, opts) {
+  opts = opts || {};
+  const noChange = opts.noChange;
+  const collapsed = opts.collapsed || noChange;
+  let cls = 'tab-section';
+  if (collapsed) cls += ' collapsed';
+  if (noChange) cls += ' no-changes';
+
+  // Count populated fields in this section
+  const tmp = document.createElement('div');
+  tmp.innerHTML = contentHtml;
+  const allRows = tmp.querySelectorAll('.field-row');
+  const populated = tmp.querySelectorAll('.field-row .field-value:not(.empty)');
+
+  return `<div class="${cls}" style="display:block">
+    <div class="tab-header" onclick="this.parentElement.classList.toggle('collapsed')">
+      <h3>${title} <span class="field-count">${populated.length}/${allRows.length}</span></h3>
+      <span>${noChange ? '<span class="no-change-label">No changes</span>' : ''} <span class="collapse-icon">▼</span></span>
+    </div>
+    <div class="tab-body">${contentHtml}</div>
+  </div>`;
+}
+
+function entityCard(title, fieldsHtml, action) {
+  let badgeHtml = '';
+  if (action) {
+    badgeHtml = `<span class="action-badge ${action}">${action}</span>`;
+  }
+  return `<div class="entity-card">
+    <div class="entity-card-header"><h4>${escHtml(title)}</h4>${badgeHtml}</div>
+    ${fieldsHtml}
+  </div>`;
+}
+
+// ============================================================
+// SUPPORTING DOCUMENTS (mirrors form builder logic)
+// ============================================================
+
+function buildSupportingDocs(d) {
+  const docs = [];
+  const fid = (d.formId || '').toLowerCase().replace('-','');
+
+  const ownerName = (o) => {
+    if (o.type === 'person' || o.type === 'natural') {
+      if (o.idFirst || o.idLast) return [o.idFirst, o.idLast].filter(Boolean).join(' ');
+      return [o.first, o.middle, o.last].filter(Boolean).join(' ') || 'unnamed owner';
+    }
+    if (o.type === 'ki_company' || o.type === 'kiribati_co') return o.entityName || o.rmEntityName || 'unnamed company';
+    if (o.type === 'other_entity') return o.idEntityName || o.oeName || o.rmEntityName || 'unnamed entity';
+    return o.displayName || 'unnamed';
+  };
+
+  // BN-0, BN-1
+  if (fid === 'bn0' || fid === 'bn1') {
+    (d.owners||[]).filter(o => o.type === 'person').forEach(o => docs.push('Government-issued photo ID for ' + ownerName(o)));
+    (d.owners||[]).filter(o => o.type === 'other_entity').forEach(o => docs.push('Evidence of registration for ' + ownerName(o)));
+    if (d.foreignInvestment === 'Yes') docs.push('Foreign Investment Registration Certificate');
+    if (d.nominee === 'Yes' && d.beneficialOwners) {
+      d.beneficialOwners.forEach((bo,i) => {
+        const n = [bo.first, bo.middle, bo.last].filter(Boolean).join(' ') || 'Beneficial owner ' + (i+1);
+        docs.push('Government-issued photo ID for ' + n + ' (beneficial owner)');
+      });
+    }
+  }
+  // BN-3
+  if (fid === 'bn3') {
+    const sections = d.sections || [];
+    if (sections.includes('foreign') && d.foreignInvestment === 'Yes') docs.push('Foreign Investment Registration Certificate');
+    if (sections.includes('owners')) {
+      (d.owners||[]).forEach(o => {
+        if ((o.type === 'person' || o.type === 'natural') && o.action === 'adding') docs.push('Government-issued photo ID for ' + ownerName(o) + ' (new owner)');
+        if ((o.type === 'person' || o.type === 'natural') && o.action === 'updating' && o.chngFields && (o.chngFields.includes('name') || o.chngFields.includes('gender'))) {
+          const r = []; if (o.chngFields.includes('name')) r.push('name'); if (o.chngFields.includes('gender')) r.push('gender');
+          docs.push('Government-issued photo ID for ' + ownerName(o) + ' (' + r.join(' and ') + ' change)');
+        }
+        if (o.type === 'other_entity' && o.action === 'adding') docs.push('Evidence of registration for ' + ownerName(o) + ' (new owner)');
+        if (o.type === 'other_entity' && o.action === 'updating' && o.chngFields) {
+          if (['entity_name','entity_type','reg_number','jurisdiction'].some(f => o.chngFields.includes(f)))
+            docs.push('Evidence of registration for ' + ownerName(o) + ' (entity details changing)');
+        }
+      });
+    }
+    if (sections.includes('nominee') && d.nominee === 'Yes' && d.beneficialOwners) {
+      d.beneficialOwners.forEach((bo,i) => {
+        const n = [bo.first, bo.middle, bo.last].filter(Boolean).join(' ') || 'Beneficial owner ' + (i+1);
+        docs.push('Government-issued photo ID for ' + n + ' (beneficial owner)');
+      });
+    }
+  }
+  if (fid === 'bn6' && d.filingBn3 === 'Yes') docs.push('BN-3: Notice of change of business information');
+  if (fid === 'bn7' && d.hasDocs === 'Yes') docs.push('Supporting documentation for proposed corrective action');
+  if (fid === 'bn8') docs.push('Court order');
+
+  // CO-0, CO-1
+  if (fid === 'co0' || fid === 'co1') {
+    if (d.constitution === 'own') docs.push('Company constitution');
+    if (d.foreign === 'Yes') docs.push('Foreign Investment Registration Certificate');
+    (d.directors||[]).forEach((dir,i) => docs.push('Government-issued photo ID for ' + (dir.displayName || 'Director ' + (i+1))));
+  }
+  if (fid === 'co3' && d.constType === 'own') docs.push('Company constitution or modified default constitution');
+  if (fid === 'co4') {
+    if (d.multiClass === 'Yes') docs.push('Details of classes of shares');
+    if (d.rights === 'Yes') docs.push('Details of rights attached to shares');
+  }
+  if (['co5','co6','co7'].includes(fid) && d.multiClass === 'Yes') docs.push('Details of classes of shares');
+  if (fid === 'co8') {
+    (d.directors||[]).forEach(dir => {
+      const name = dir.displayName || 'Director';
+      if (dir.action === 'appointed') docs.push('Government-issued photo ID for ' + name + ' (new director)');
+      if (dir.action === 'changed' && dir.chngFields) {
+        const r = [];
+        if (dir.chngFields.includes('name')) r.push('name');
+        if (dir.chngFields.includes('gender')) r.push('gender');
+        if (r.length) docs.push('Government-issued photo ID for ' + name + ' (' + r.join(' and ') + ' change)');
+      }
+    });
+  }
+  if (fid === 'co9') { docs.push('Copy of court order'); docs.push('Constitution as altered or added to'); }
+  if (fid === 'co13' && d.publicNotice === 'Yes') { docs.push('Copy of public notice'); docs.push('Evidence of notice sent to each known creditor'); }
+  if (fid === 'co15') docs.push('Copy of court order');
+  if (fid === 'co19') {
+    (d.shareholders||[]).forEach(sh => {
+      const name = sh.displayName || 'unnamed shareholder';
+      const cf = sh.chngFields || [];
+      if ((sh.type === 'natural' || sh.type === 'person') && (cf.includes('name') || cf.includes('gender'))) {
+        const r = []; if (cf.includes('name')) r.push('name'); if (cf.includes('gender')) r.push('gender');
+        docs.push('Government-issued photo ID for ' + name + ' (' + r.join(' and ') + ' change)');
+      }
+      if (sh.type === 'other_entity' && ['entity_name','entity_type','reg_number','jurisdiction'].some(f => cf.includes(f)))
+        docs.push('Evidence of registration for ' + name + ' (entity details changing)');
+    });
+  }
+
+  return docs;
+}
+
+// ============================================================
+// DETECT FORM FAMILY
+// ============================================================
+
+function isBN(fid) { return /^bn/i.test(fid.replace('-','')); }
+function isCO(fid) { return /^co/i.test(fid.replace('-','')); }
+function isChangeFiling(fid) {
+  const f = fid.toLowerCase().replace('-','');
+  return ['bn3','co8','co10','co17','co19'].includes(f);
+}
+
+// ============================================================
+// BN FIELD BUILDERS
+// ============================================================
+
+function buildBNFields(d) {
+  const fid = (d.formId || '').toLowerCase().replace('-','');
+  const sections = [];
+  const isChange = fid === 'bn3';
+  const changeSections = isChange ? (d.sections || []) : [];
+
+  // FILER (reference only — not stored in registry, always first and collapsed)
+  if (d.filer) {
+    let filerHtml = '';
+    filerHtml += fieldRow('First name', uc(d.filer.first), { noCopy: true });
+    if (d.filer.middle) filerHtml += fieldRow('Middle name', uc(d.filer.middle), { noCopy: true });
+    filerHtml += fieldRow('Last name', uc(d.filer.last), { noCopy: true });
+    filerHtml += addressRows(d.filer, { noCopy: true });
+    filerHtml += fieldRow('Phone', d.filer.phone, { noCopy: true });
+    filerHtml += fieldRow('Email', d.filer.email, { noCopy: true });
+    sections.push(tabSection('Filer Details (reference only)', filerHtml, { collapsed: true }));
+  }
+
+  // 1. ENTITY DETAILS
+  let entityHtml = '';
+  entityHtml += fieldRow('Business name', uc(d.businessName));
+  entityHtml += fieldRow('Registration number', d.regNumber);
+  if (d.formId) entityHtml += fieldRow('Form', d.formId, { noCopy: true });
+  sections.push(tabSection('Business Name', entityHtml));
+
+  // 2. FOREIGN INVESTMENT
+  if (fid === 'bn0' || fid === 'bn1' || (isChange && changeSections.includes('foreign'))) {
+    let fiHtml = '';
+    if (isChange && d.foreignInvDate) fiHtml += fieldRow('Date of change', formatDate(d.foreignInvDate));
+    fiHtml += fieldRow('Foreign investment', d.foreignInvestment, { noCopy: true });
+    const noChange = isChange && !changeSections.includes('foreign');
+    sections.push(tabSection('Foreign Investment', fiHtml, { noChange }));
+  }
+
+  // 4. OWNERS
+  if (fid === 'bn0' || fid === 'bn1' || (isChange && changeSections.includes('owners'))) {
+    let ownersHtml = '';
+    const owners = d.owners || [];
+    if (owners.length === 0) {
+      ownersHtml = '<div style="padding:12px 16px;color:var(--text-light);font-size:13px;">No owners in filing data</div>';
+    } else {
+      owners.forEach((o, i) => {
+        let fields = '';
+        const t = o.type;
+        const action = o.action || '';
+        fields += fieldRow('Type', TYPE_LABELS[t] || t, { noCopy: true });
+        if (o.date) fields += fieldRow('Date', formatDate(o.date));
+
+        if (action === 'removing') {
+          // Removal — minimal info
+          if (o.rmFirst || o.rmLast) fields += fieldRow('Name', uc([o.rmFirst, o.rmMiddle, o.rmLast].filter(Boolean).join(' ')));
+          if (o.rmEntityName) fields += fieldRow('Entity name', uc(o.rmEntityName));
+          if (o.rmRegNo) fields += fieldRow('Reg number', o.rmRegNo);
+        } else if (t === 'person') {
+          fields += fieldRow('First name', uc(o.first));
+          if (o.middle) fields += fieldRow('Middle name', uc(o.middle));
+          fields += fieldRow('Last name', uc(o.last));
+          fields += fieldRow('Nationality', o.nationality);
+          if (o.nationality2) fields += fieldRow('Other nationality', o.nationality2);
+          fields += fieldRow('Gender', o.gender, { noCopy: true });
+          fields += fieldRow('Date of birth', formatDob(o.dobMm, o.dobYy || o.dobYyyy));
+          fields += addressRows(o);
+          if (o.formerName) fields += fieldRow('Former name', uc(o.formerName));
+        } else if (t === 'ki_company' || t === 'kiribati_co') {
+          fields += fieldRow('Entity name', uc(o.entityName));
+          fields += fieldRow('Registration number', o.entityRegNo || o.entityReg);
+        } else if (t === 'other_entity') {
+          fields += fieldRow('Entity name', uc(o.oeName));
+          fields += fieldRow('Entity type', o.oeType);
+          fields += fieldRow('Registration number', o.oeRegNo);
+          fields += fieldRow('Home jurisdiction', o.oeJurisdiction);
+          fields += addressRows(o, { prefix: 'Entity', keys: { addr1:'oeAddr1', addr2:'oeAddr2', city:'oeCity', island:'oeIsland', country:'oeCountry', postcode:'oePostcode' }});
+          if (o.rpFirst || o.rpLast) {
+            fields += fieldRow('Responsible person', uc([o.rpFirst, o.rpMiddle, o.rpLast].filter(Boolean).join(' ')));
+            fields += fieldRow('RP phone', o.rpPhone);
+            fields += fieldRow('RP email', o.rpEmail);
+            fields += addressRows(o, { prefix: 'RP' });
+          }
+        }
+
+        if (action === 'updating' && o.chngFields) {
+          fields += fieldRow('Fields changing', o.chngFields.join(', '), { noCopy: true });
+        }
+
+        const title = entityName(o) || ('Owner ' + (i + 1));
+        ownersHtml += entityCard(title, fields, action);
+      });
+    }
+    const noChange = isChange && !changeSections.includes('owners');
+    sections.push(tabSection('Owners', ownersHtml, { noChange }));
+  }
+
+  // 5. BENEFICIAL OWNERS / NOMINEE
+  if (fid === 'bn0' || fid === 'bn1' || (isChange && changeSections.includes('nominee'))) {
+    let boHtml = '';
+    if (isChange && d.nomineeDate) boHtml += fieldRow('Date of change', formatDate(d.nomineeDate));
+    boHtml += fieldRow('Nominee / trustee', d.nominee, { noCopy: true });
+    const bos = d.beneficialOwners || [];
+    bos.forEach((bo, i) => {
+      let fields = '';
+      fields += fieldRow('First name', uc(bo.first));
+      if (bo.middle) fields += fieldRow('Middle name', uc(bo.middle));
+      fields += fieldRow('Last name', uc(bo.last));
+      fields += fieldRow('Nationality', bo.nationality);
+      if (bo.nationality2) fields += fieldRow('Other nationality', bo.nationality2);
+      if (bo.relationship) fields += fieldRow('Relationship', bo.relationship);
+      fields += addressRows(bo);
+      if (bo.boDate) fields += fieldRow('Date became BO', formatDate(bo.boDate));
+      boHtml += entityCard(uc([bo.first, bo.last].filter(Boolean).join(' ')) || ('Beneficial Owner ' + (i+1)), fields);
+    });
+    const noChange = isChange && !changeSections.includes('nominee');
+    sections.push(tabSection('Beneficial Owners', boHtml, { noChange }));
+  }
+
+  // 6. BUSINESS ADDRESS
+  if (fid === 'bn0' || fid === 'bn1' || (isChange && changeSections.includes('address'))) {
+    let addrHtml = '';
+    if (isChange && d.addressDate) addrHtml += fieldRow('Date of change', formatDate(d.addressDate));
+    const ba = d.businessAddress || {};
+    addrHtml += fieldRow('Village / street', uc(ba.addr1));
+    addrHtml += fieldRow('Second line', uc(ba.addr2));
+    addrHtml += fieldRow('Island', ba.island);
+    addrHtml += fieldRow('Website', ba.website);
+    addrHtml += fieldRow('Email', ba.email);
+    const noChange = isChange && !changeSections.includes('address');
+    sections.push(tabSection('Principal Place of Business', addrHtml, { noChange }));
+  }
+
+  // 7. BUSINESS ACTIVITIES
+  if (fid === 'bn0' || fid === 'bn1' || (isChange && changeSections.includes('activities'))) {
+    let actHtml = '';
+    if (isChange && d.activitiesDate) actHtml += fieldRow('Date of change', formatDate(d.activitiesDate));
+    const acts = d.activities || [];
+    if (acts.length > 0) {
+      acts.forEach(a => { actHtml += fieldRow('Activity', a, { noCopy: true }); });
+    } else {
+      actHtml += '<div style="padding:12px 16px;color:var(--text-light);font-size:13px;">No activities selected</div>';
+    }
+    const noChange = isChange && !changeSections.includes('activities');
+    sections.push(tabSection('Business Activities', actHtml, { noChange }));
+  }
+
+  // 8. FORM-SPECIFIC FIELDS
+  // BN-1 commencement date
+  if (fid === 'bn1' && d.commenceDate) {
+    sections.push(tabSection('Commencement', fieldRow('Commencement date', formatDate(d.commenceDate))));
+  }
+  // BN-2
+  if (fid === 'bn2') {
+    let html = fieldRow('Return month', d.returnMonthName || MONTHS[(parseInt(d.returnMonth)||1)-1] || d.returnMonth, { noCopy: true });
+    sections.push(tabSection('Annual Return Month', html));
+  }
+  // BN-4
+  if (fid === 'bn4') {
+    let html = '';
+    (d.proposedNames || []).forEach((n, i) => { html += fieldRow(i === 0 ? 'Preferred name' : 'Option ' + (i+1), uc(n)); });
+    sections.push(tabSection('Proposed New Name', html));
+  }
+  // BN-5
+  if (fid === 'bn5') {
+    sections.push(tabSection('Cessation', fieldRow('Cessation date', formatDate(d.cessationDate))));
+  }
+  // BN-6
+  if (fid === 'bn6') {
+    let html = '';
+    if (d.removeDate) html += fieldRow('Date of removal', formatDate(d.removeDate));
+    if (d.removedReasons) html += fieldRow('Reasons for removal', (d.removedReasons || []).join(', '), { noCopy: true });
+    html += fieldRow('Filing BN-3 with this application', d.filingBn3, { noCopy: true });
+    sections.push(tabSection('Restoration Details', html));
+  }
+  // BN-7
+  if (fid === 'bn7') {
+    let html = '';
+    html += fieldRow('Correction statement', d.correctionStatement);
+    html += fieldRow('Supporting documents', d.hasDocs, { noCopy: true });
+    sections.push(tabSection('Correction Details', html));
+  }
+  // BN-8
+  if (fid === 'bn8') {
+    sections.push(tabSection('Court Order', fieldRow('Court order date', formatDate(d.courtDate))));
+  }
+
+  // SIGNATURE
+  if (d.signature) {
+    let sigHtml = '';
+    sigHtml += fieldRow('Signed by', d.signature.name);
+    sigHtml += fieldRow('Capacity', d.signature.capacity, { noCopy: true });
+    sections.push(tabSection('Declaration', sigHtml, { collapsed: true }));
+  }
+
+  return sections.join('');
+}
+
+// ============================================================
+// CO FIELD BUILDERS
+// ============================================================
+
+function buildCOFields(d) {
+  const fid = (d.formId || d.form || '').toLowerCase().replace('-','');
+  const sections = [];
+  const isChange = isChangeFiling(fid);
+  const changeSections = d.sections || d.changes || [];
+
+  // ── FILER (reference only — always first, collapsed) ──
+  if (d.filer) {
+    let filerHtml = '';
+    filerHtml += fieldRow('First name', uc(d.filer.first), { noCopy: true });
+    if (d.filer.middle) filerHtml += fieldRow('Middle name', uc(d.filer.middle), { noCopy: true });
+    filerHtml += fieldRow('Last name', uc(d.filer.last), { noCopy: true });
+    filerHtml += addressRows(d.filer, { noCopy: true });
+    filerHtml += fieldRow('Phone', d.filer.phone, { noCopy: true });
+    filerHtml += fieldRow('Email', d.filer.email, { noCopy: true });
+    sections.push(tabSection('Filer Details (reference only)', filerHtml, { collapsed: true }));
+  }
+
+  // ── TAB 1: GENERAL ──
+  // Registry: Entity Details + Constitution + Foreign Investment
+  let genHtml = '';
+  genHtml += fieldRow('Company name', uc(d.companyName));
+  genHtml += fieldRow('Registration number', d.regNumber);
+  if (d.formId) genHtml += fieldRow('Form', d.formId, { noCopy: true });
+  if (d.constitution) genHtml += fieldRow('Constitution', CONSTITUTION_LABELS[d.constitution] || d.constitution, { noCopy: true });
+  if (d.foreign !== undefined) genHtml += fieldRow('Foreign investment', d.foreign, { noCopy: true });
+  sections.push(tabSection('General', genHtml));
+
+  // ── TAB 2: DIRECTORS ──
+  if (d.directors && d.directors.length > 0) {
+    let dirHtml = '';
+    d.directors.forEach((dir, i) => {
+      let fields = '';
+      const action = dir.action || '';
+      fields += fieldRow('Name', uc(dir.displayName || [dir.first, dir.middle, dir.last].filter(Boolean).join(' ')));
+      if (dir.first) fields += fieldRow('First name', uc(dir.first));
+      if (dir.middle) fields += fieldRow('Middle name', uc(dir.middle));
+      if (dir.last) fields += fieldRow('Last name', uc(dir.last));
+      if (dir.nationality) fields += fieldRow('Nationality', dir.nationality);
+      if (dir.otherNat) fields += fieldRow('Other nationality', dir.otherNat);
+      if (dir.gender) fields += fieldRow('Gender', dir.gender, { noCopy: true });
+      if (dir.dobMm || dir.dobYyyy) fields += fieldRow('Date of birth', formatDob(dir.dobMm, dir.dobYyyy));
+      if (dir.email) fields += fieldRow('Email', dir.email);
+      if (dir.appointDate) fields += fieldRow('Date of appointment', formatDate(dir.appointDate));
+      if (dir.cessDate) fields += fieldRow('Date of cessation', formatDate(dir.cessDate));
+      if (dir.cessReason) fields += fieldRow('Reason', dir.cessReason, { noCopy: true });
+      if (dir.date) fields += fieldRow('Date', formatDate(dir.date));
+      if (dir.address) fields += addressRows(dir.address, { prefix: 'Residential' });
+      if (dir.postalSame) fields += fieldRow('Postal same as residential', dir.postalSame, { noCopy: true });
+      if (dir.postalSame === 'No' && dir.postalAddress) fields += addressRows(dir.postalAddress, { prefix: 'Postal' });
+      if (dir.formerName) fields += fieldRow('Former name', uc(dir.formerName));
+      if (action === 'changed' && dir.chngFields) fields += fieldRow('Fields changing', dir.chngFields.join(', '), { noCopy: true });
+
+      const title = uc(dir.displayName || [dir.first, dir.last].filter(Boolean).join(' ')) || ('Director ' + (i+1));
+      dirHtml += entityCard(title, fields, action);
+    });
+    sections.push(tabSection('Directors', dirHtml));
+  }
+
+  // ── TAB 3: SHARES ──
+  // Registry: Total shares, multiple share classes (CO-0/CO-1)
+  // Plus transaction details for CO-4/5/6/7
+  if (d.totalShares || d.sharesBefore || d.sharesIssued || d.sharesAcquired || d.sharesRedeemed || d.multiClass !== undefined) {
+    let shareHtml = '';
+    if (d.totalShares) shareHtml += fieldRow('Total shares', d.totalShares);
+    if (d.multiClass !== undefined) shareHtml += fieldRow('Multiple share classes', d.multiClass, { noCopy: true });
+    if (d.sharesBefore) shareHtml += fieldRow('Shares before', d.sharesBefore);
+    if (d.sharesIssued) shareHtml += fieldRow('Shares issued', d.sharesIssued);
+    if (d.sharesAcquired) shareHtml += fieldRow('Shares acquired', d.sharesAcquired);
+    if (d.sharesRedeemed) shareHtml += fieldRow('Shares redeemed', d.sharesRedeemed);
+    if (d.sharesAfter) shareHtml += fieldRow('Shares after', d.sharesAfter);
+    if (d.issueDate) shareHtml += fieldRow('Issue date', formatDate(d.issueDate));
+    if (d.acqDate) shareHtml += fieldRow('Acquisition date', formatDate(d.acqDate));
+    if (d.redDate) shareHtml += fieldRow('Redemption date', formatDate(d.redDate));
+    if (d.transferDate) shareHtml += fieldRow('Transfer date', formatDate(d.transferDate));
+    if (d.rights) shareHtml += fieldRow('Rights attached', d.rights, { noCopy: true });
+    sections.push(tabSection('Shares', shareHtml));
+  }
+
+  // ── TAB 4: SHAREHOLDERS ──
+  if (d.shareholders && d.shareholders.length > 0) {
+    let shHtml = '';
+    d.shareholders.forEach((sh, i) => {
+      let fields = '';
+      const action = sh.action || '';
+      fields += fieldRow('Type', TYPE_LABELS[sh.type] || sh.type, { noCopy: true });
+      if (sh.shares) fields += fieldRow('Number of shares', sh.shares);
+      if (sh.shareClass) fields += fieldRow('Class of shares', sh.shareClass);
+
+      if (sh.type === 'natural' || sh.type === 'person') {
+        fields += fieldRow('First name', uc(sh.first));
+        if (sh.middle) fields += fieldRow('Middle name', uc(sh.middle));
+        fields += fieldRow('Last name', uc(sh.last));
+        if (sh.nationality) fields += fieldRow('Nationality', sh.nationality);
+        if (sh.otherNat) fields += fieldRow('Other nationality', sh.otherNat);
+        if (sh.gender) fields += fieldRow('Gender', sh.gender, { noCopy: true });
+        if (sh.dobMm || sh.dobYyyy) fields += fieldRow('Date of birth', formatDob(sh.dobMm, sh.dobYyyy));
+        if (sh.address) fields += addressRows(sh.address);
+      } else if (sh.type === 'kiribati_co' || sh.type === 'ki_company') {
+        fields += fieldRow('Entity name', uc(sh.entityName));
+        fields += fieldRow('Registration number', sh.entityReg);
+      } else if (sh.type === 'other_entity') {
+        fields += fieldRow('Entity name', uc(sh.oeName));
+        if (sh.oeType) fields += fieldRow('Entity type', sh.oeType);
+        if (sh.oeReg) fields += fieldRow('Registration number', sh.oeReg);
+        if (sh.oeJuris) fields += fieldRow('Home jurisdiction', sh.oeJuris);
+        if (sh.address) fields += addressRows(sh.address);
+      }
+      if (sh.formerName) fields += fieldRow('Former name', uc(sh.formerName));
+      if (action && sh.chngFields) fields += fieldRow('Fields changing', sh.chngFields.join(', '), { noCopy: true });
+
+      const title = uc(sh.displayName || entityName(sh)) || ('Shareholder ' + (i+1));
+      shHtml += entityCard(title, fields, action);
+    });
+    sections.push(tabSection('Shareholders', shHtml));
+  }
+
+  // ── TAB 5: ADDRESSES ──
+  // Registry: Registered office (village, second line, country, island, postal code, email),
+  // Postal address (same as registered radio + fields), Principal place of business
+  if (d.regAddr || d.postalAddr || d.bizAddr) {
+    let addrHtml = '';
+    if (d.regDate) addrHtml += fieldRow('Date of change', formatDate(d.regDate));
+    if (d.regAddr) {
+      addrHtml += kiribatiAddrRows(d.regAddr, 'Registered');
+    }
+    if (d.postalSame) addrHtml += fieldRow('Postal same as registered', d.postalSame, { noCopy: true });
+    if (d.postalDate) addrHtml += fieldRow('Postal change date', formatDate(d.postalDate));
+    if (d.postalAddr && d.postalSame !== 'Yes') {
+      addrHtml += kiribatiAddrRows(d.postalAddr, 'Postal');
+    }
+    if (d.bizSame) addrHtml += fieldRow('Business same as registered', d.bizSame, { noCopy: true });
+    if (d.bizDate) addrHtml += fieldRow('Business change date', formatDate(d.bizDate));
+    if (d.bizAddr && d.bizSame !== 'Yes') {
+      addrHtml += kiribatiAddrRows(d.bizAddr, 'Business');
+    }
+    sections.push(tabSection('Addresses', addrHtml));
+  }
+
+  // ── TAB 6: BUSINESS ACTIVITIES ──
+  if (d.activities && d.activities.length > 0) {
+    let actHtml = '';
+    if (d.changeDate && fid === 'co18') actHtml += fieldRow('Date of change', formatDate(d.changeDate));
+    d.activities.forEach(a => { actHtml += fieldRow('Activity', a, { noCopy: true }); });
+    sections.push(tabSection('Business Activities', actHtml));
+  }
+
+  // ── FORM-SPECIFIC SECTIONS ──
+  // CO-2
+  if (fid === 'co2') {
+    let html = '';
+    if (d.newName1) html += fieldRow('Preferred new name', uc(d.newName1));
+    if (d.newName2) html += fieldRow('Second option', uc(d.newName2));
+    sections.push(tabSection('Proposed New Name', html));
+  }
+  // CO-3
+  if (fid === 'co3') {
+    let html = '';
+    html += fieldRow('Constitution type', CONSTITUTION_LABELS[d.constType] || d.constType, { noCopy: true });
+    if (d.changeDate) html += fieldRow('Date of change', formatDate(d.changeDate));
+    sections.push(tabSection('Constitution Change', html));
+  }
+  // CO-9
+  if (fid === 'co9') {
+    sections.push(tabSection('Court Order', fieldRow('Court order date', formatDate(d.courtDate))));
+  }
+  // CO-11
+  if (fid === 'co11') {
+    let html = '';
+    if (d.effectDate) html += fieldRow('Effective date', formatDate(d.effectDate));
+    if (d.recAddr) html += kiribatiAddrRows(d.recAddr, 'Records');
+    sections.push(tabSection('Records Location', html));
+  }
+  // CO-12
+  if (fid === 'co12') {
+    sections.push(tabSection('Auditor Removal', fieldRow('Event date', formatDate(d.eventDate))));
+  }
+  // CO-13
+  if (fid === 'co13') {
+    let html = '';
+    if (d.dissDate) html += fieldRow('Dissolution date', formatDate(d.dissDate));
+    html += fieldRow('Public notice given', d.publicNotice, { noCopy: true });
+    if (d.noNoticeText) html += fieldRow('Reason for no notice', d.noNoticeText);
+    sections.push(tabSection('Dissolution', html));
+  }
+  // CO-14
+  if (fid === 'co14') {
+    let html = '';
+    html += fieldRow('Capacity', d.capacity, { noCopy: true });
+    html += fieldRow('Grounds', d.grounds, { noCopy: true });
+    sections.push(tabSection('Removal from Register', html));
+  }
+  // CO-15
+  if (fid === 'co15') {
+    sections.push(tabSection('Court Amalgamation', fieldRow('Court order date', formatDate(d.courtDate))));
+  }
+  // CO-16
+  if (fid === 'co16') {
+    let html = '';
+    if (d.removedReason) html += fieldRow('Reason for removal', d.removedReason, { noCopy: true });
+    if (d.removeDate) html += fieldRow('Date of removal', formatDate(d.removeDate));
+    if (d.capacity) html += fieldRow('Capacity', Array.isArray(d.capacity) ? d.capacity.join(', ') : d.capacity, { noCopy: true });
+    html += fieldRow('Fee waiver requested', d.waiver, { noCopy: true });
+    if (d.waiverReason) html += fieldRow('Waiver reason', d.waiverReason);
+    sections.push(tabSection('Restoration Details', html));
+  }
+  // CO-17
+  if (fid === 'co17') {
+    const changes = d.changes || [];
+    if (changes.includes('appointed') && d.appt) {
+      let html = '';
+      html += fieldRow('Appointment date', formatDate(d.appt.date));
+      html += fieldRow('Name', uc(d.appt.displayName));
+      if (d.appt.address) html += addressRows(d.appt.address, { prefix: 'Residential' });
+      if (d.appt.postalSame) html += fieldRow('Postal same', d.appt.postalSame, { noCopy: true });
+      if (d.appt.postalSame === 'No' && d.appt.postalAddress) html += addressRows(d.appt.postalAddress, { prefix: 'Postal' });
+      sections.push(tabSection('Auditor — Appointed', html));
+    }
+    if (changes.includes('ceased') && d.cess) {
+      let html = '';
+      html += fieldRow('Cessation date', formatDate(d.cess.date));
+      html += fieldRow('Name', uc(d.cess.displayName));
+      sections.push(tabSection('Auditor — Ceased', html));
+    }
+    if (changes.includes('changed') && d.chng) {
+      let html = '';
+      html += fieldRow('Change date', formatDate(d.chng.date));
+      html += fieldRow('Name', uc(d.chng.displayName));
+      if (d.chng.chngFields) html += fieldRow('Fields changing', d.chng.chngFields.join(', '), { noCopy: true });
+      if (d.chng.address) html += addressRows(d.chng.address, { prefix: 'Residential' });
+      if (d.chng.postalSame) html += fieldRow('Postal same', d.chng.postalSame, { noCopy: true });
+      if (d.chng.postalSame === 'No' && d.chng.postalAddress) html += addressRows(d.chng.postalAddress, { prefix: 'Postal' });
+      if (d.chng.formerName) html += fieldRow('Former name', uc(d.chng.formerName));
+      sections.push(tabSection('Auditor — Changed Details', html));
+    }
+  }
+
+  // SIGNATURE
+  if (d.signature) {
+    let sigHtml = '';
+    sigHtml += fieldRow('Signed by', d.signature.name);
+    sigHtml += fieldRow('Capacity', d.signature.capacity, { noCopy: true });
+    sections.push(tabSection('Declaration', sigHtml, { collapsed: true }));
+  }
+
+  return sections.join('');
+}
+
+// ============================================================
+// MAIN LOAD
+// ============================================================
+
+function loadData() {
+  const raw = document.getElementById('jsonInput').value;
+  const errBanner = document.getElementById('errorBanner');
+  const errText = document.getElementById('errorText');
+  errBanner.style.display = 'none';
+  document.getElementById('fieldsContainer').innerHTML = '';
+  document.getElementById('filingHeader').style.display = 'none';
+  document.getElementById('docsBanner').style.display = 'none';
+  document.getElementById('progressBar').style.display = 'none';
+  totalCopyable = 0; copiedCount = 0;
+
+  if (!raw.trim()) {
+    errText.textContent = 'Please paste JSON data.';
+    errBanner.style.display = 'block';
+    return;
+  }
+
+  let data;
+  try {
+    data = parseInput(raw);
+  } catch (e) {
+    errText.textContent = 'Invalid JSON — ' + e.message;
+    errBanner.style.display = 'block';
+    return;
+  }
+
+  const formId = data.formId || data.form || '';
+  // Infer form family from data shape if formId missing
+  let detectedFamily = '';
+  const fid = formId.toLowerCase().replace('-','');
+  if (isBN(fid)) {
+    detectedFamily = 'bn';
+  } else if (isCO(fid)) {
+    detectedFamily = 'co';
+  } else if (!formId) {
+    // No formId — detect from data shape
+    if (data.businessName) detectedFamily = 'bn';
+    else if (data.companyName) detectedFamily = 'co';
+  }
+  const formNorm = formId ? formId.toUpperCase().replace(/([A-Z]+)(\d+)/,'$1-$2') : (detectedFamily === 'bn' ? 'BN' : detectedFamily === 'co' ? 'CO' : '');
+
+  // Filing header
+  const fh = document.getElementById('filingHeader');
+  const name = data.businessName || data.companyName || '';
+  const formName = data.formName || '';
+  fh.innerHTML = `<span class="form-badge">${escHtml(formNorm)}</span>
+    <span class="entity-name">${escHtml(uc(name))}</span>
+    ${formName ? '<span class="form-desc">' + escHtml(formName) + '</span>' : ''}
+    ${data.regNumber ? '<span class="form-desc">Registration: ' + escHtml(data.regNumber) + '</span>' : ''}`;
+  fh.style.display = 'block';
+
+  // Supporting docs
+  const docs = buildSupportingDocs(data);
+  if (docs.length > 0) {
+    const db = document.getElementById('docsBanner');
+    db.innerHTML = `<div class="docs-title">Supporting documents required</div>
+      <ul>${docs.map(d => '<li>' + escHtml(d) + '</li>').join('')}</ul>
+      <div class="docs-confirm">
+        <input type="checkbox" id="docsCheck">
+        <label for="docsCheck">I have reviewed the supporting documentation for this filing</label>
+      </div>`;
+    db.style.display = 'block';
+  }
+
+  // Build fields
+  let html = '';
+  if (detectedFamily === 'bn' || isBN(fid)) {
+    html = buildBNFields(data);
+  } else if (detectedFamily === 'co' || isCO(fid)) {
+    html = buildCOFields(data);
+  } else {
+    errText.textContent = 'Could not detect form type. Expected formId (e.g. BN-0, CO-1) or businessName/companyName field.';
+    errBanner.style.display = 'block';
+    return;
+  }
+
+  document.getElementById('fieldsContainer').innerHTML = html;
+  document.getElementById('progressBar').style.display = 'block';
+  document.getElementById('btnClear').style.display = 'inline-block';
+  updateProgress();
+}
+
+function clearAll() {
+  document.getElementById('jsonInput').value = '';
+  document.getElementById('fieldsContainer').innerHTML = '';
+  document.getElementById('filingHeader').style.display = 'none';
+  document.getElementById('docsBanner').style.display = 'none';
+  document.getElementById('progressBar').style.display = 'none';
+  document.getElementById('errorBanner').style.display = 'none';
+  document.getElementById('btnClear').style.display = 'none';
+  totalCopyable = 0; copiedCount = 0;
+}
+</script>
+</body>
+</html>
